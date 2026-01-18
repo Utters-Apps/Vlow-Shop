@@ -2,7 +2,13 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
+    <!-- Viewport: keep layout locked and prevent user zooming on mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Vlow | App</title>
 
     <!-- Tailwind CSS -->
@@ -1803,6 +1809,63 @@
                 el.style.webkitUserSelect = 'text';
                 el.style.MozUserSelect = 'text';
             };
+        })();
+
+        // --- DISABLE ZOOM INTERACTIONS (double-tap / pinch / gesture) ---
+        (function disableZoomGestures(){
+            // prevent gesturestart (iOS Safari)
+            document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive: false });
+
+            // prevent double-tap to zoom
+            let lastTouch = 0;
+            document.addEventListener('touchend', function(e){
+                const now = Date.now();
+                if (now - lastTouch <= 300) {
+                    e.preventDefault();
+                }
+                lastTouch = now;
+            }, { passive: false });
+
+            // prevent pinch/zoom via touchmove with multiple touches
+            document.addEventListener('touchmove', function(e){
+                if (e.touches && e.touches.length > 1) e.preventDefault();
+            }, { passive: false });
+
+            // ensure CSS touch-action disables browser gestures where supported
+            document.documentElement.style.touchAction = 'manipulation';
+            document.body.style.touchAction = 'manipulation';
+        })();
+
+        // --- PWA: Service Worker registration and offline hint ---
+        (function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(reg){
+                        console.log('SW registered:', reg.scope);
+                    }).catch(function(err){
+                        console.warn('SW registration failed:', err);
+                    });
+                });
+            }
+            // simple prompt to install (for supporting browsers)
+            let deferredPrompt = null;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // show small prompt in-app
+                const t = document.getElementById('toast');
+                document.getElementById('toast-msg').innerText = 'App disponível para instalar';
+                t.style.opacity = '1'; t.style.top = '24px';
+                setTimeout(()=>{ t.style.opacity = '0'; t.style.top = '6px'; }, 3500);
+                // optionally allow user to trigger install via UI later
+                window.triggerPWAInstall = async function() {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    const choice = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    return choice;
+                };
+            });
         })();
 
     </script>
