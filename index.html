@@ -1444,16 +1444,18 @@
         }
 
         // SHARE: open sharing UI for a product id (accept baseId or product id)
+        // Important: never share external seller links (e.g., Shopee). Always generate an internal link that
+        // opens the product modal on this platform (location + ?product=<id>).
         function shareProductById(id) {
             const p = products.find(x => x.id === Number(id));
             if (!p) return showToast('Produto não encontrado');
-            const url = p.link || (location.origin + location.pathname + `?product=${p.id}`);
-            // try native share first
+            // always create an internal link that opens the modal within this app
+            const url = location.origin + location.pathname + `?product=${p.id}`;
+            // try native share first with internal url; fallback to custom modal
             if (navigator.share) {
                 navigator.share({ title: p.name, text: p.desc, url }).catch(()=>{ openShareModal(url, p.id); });
                 return;
             }
-            // fallback: open custom share modal
             openShareModal(url, p.id);
         }
 
